@@ -1,399 +1,113 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<title>กัลวานอมิเตอร์ - โปสเตอร์เชิงโต้ตอบ</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
-
-  :root{
-    --panel:#14171a;
-    --panel-2:#1d2226;
-    --brass:#b8874a;
-    --brass-light:#e0b374;
-    --cream:#f2e8d5;
-    --needle:#c9432c;
-    --wire:#5f9ea3;
-    --wire-hot:#e0b374;
-    --ink:#0c0e10;
-    --muted:#8b9096;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:
-      radial-gradient(ellipse at top, #22262b 0%, var(--ink) 65%);
-    color:var(--cream);
-    font-family:'Space Grotesk',sans-serif;
-    display:flex;
-    justify-content:center;
-    padding:32px 14px 60px;
-  }
-  .poster{
-    width:100%;
-    max-width:620px;
-  }
-  header{
-    text-align:center;
-    margin-bottom:22px;
-  }
-  .eyebrow{
-    font-family:'JetBrains Mono',monospace;
-    font-size:11px;
-    letter-spacing:.35em;
-    color:var(--brass-light);
-    text-transform:uppercase;
-  }
-  h1{
-    font-family:'Bebas Neue',sans-serif;
-    font-size:clamp(40px,10vw,64px);
-    letter-spacing:.04em;
-    margin:4px 0 2px;
-    color:var(--cream);
-    text-shadow:0 0 24px rgba(224,179,116,.25);
-  }
-  h1 span{color:var(--brass-light);}
-  .sub{
-    font-size:13px;
-    color:var(--muted);
-    letter-spacing:.02em;
-  }
-
-  /* --- instrument plate --- */
-  .plate{
-    background:linear-gradient(160deg,var(--panel-2),var(--panel) 60%);
-    border:1px solid #2c3238;
-    border-radius:8px;
-    padding:22px 18px 26px;
-    box-shadow:0 30px 60px -20px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.03);
-    position:relative;
-  }
-  .plate::before{
-    content:"";
-    position:absolute;inset:8px;
-    border:1px solid rgba(184,135,74,.25);
-    border-radius:4px;
-    pointer-events:none;
-  }
-  .rivet{
-    position:absolute; width:7px; height:7px; border-radius:50%;
-    background:radial-gradient(circle at 35% 30%, #d8b57e, #6b4d27 75%);
-  }
-
-  svg{display:block; width:100%; height:auto;}
-
-  .scale-arc{fill:none; stroke:var(--brass); stroke-width:1.5;}
-  .tick{stroke:var(--cream); stroke-width:1.2;}
-  .tick.major{stroke-width:2;}
-  .tick-label{
-    font-family:'JetBrains Mono',monospace;
-    font-size:9px;
-    fill:var(--muted);
-    text-anchor:middle;
-  }
-  .zero-label{fill:var(--brass-light); font-weight:600;}
-  .needle{
-    stroke:var(--needle);
-    stroke-width:2.6;
-    stroke-linecap:round;
-    filter:drop-shadow(0 0 4px rgba(201,67,44,.55));
-    transform-origin:200px 190px;
-    transition:transform .35s cubic-bezier(.2,.8,.25,1);
-  }
-  .pivot-cap{fill:url(#brassGrad);}
-  .magnet-body{fill:#23282c; stroke:#3a4147; stroke-width:1;}
-  .pole{fill:#3d4247;}
-  .pole-N{fill:var(--needle); opacity:.85;}
-  .pole-S{fill:var(--wire); opacity:.85;}
-  .pole-label{
-    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;
-    fill:var(--ink); text-anchor:middle;
-  }
-  .coil-loop{fill:none; stroke:var(--wire); stroke-width:2; transition:stroke .3s;}
-  .coil-loop.hot{stroke:var(--wire-hot); filter:drop-shadow(0 0 3px rgba(224,179,116,.6));}
-  .field-arrow{stroke:var(--muted); stroke-width:1; opacity:.55; marker-end:url(#arrowHead);}
-  .core{fill:#2a3034; stroke:#40484e;}
-
-  .readout-row{
-    display:flex; justify-content:space-between; align-items:flex-end;
-    margin-top:8px; padding:0 4px;
-    font-family:'JetBrains Mono',monospace;
-  }
-  .readout{font-size:11px; color:var(--muted);}
-  .readout b{
-    display:block; font-size:20px; color:var(--brass-light); font-weight:600;
-  }
-  .readout.dir b{color:var(--needle);}
-
-  .control{
-    margin-top:18px;
-    background:var(--panel-2);
-    border:1px solid #2c3238;
-    border-radius:6px;
-    padding:14px 16px 16px;
-  }
-  .control label{
-    display:flex; justify-content:space-between;
-    font-family:'JetBrains Mono',monospace;
-    font-size:11px; letter-spacing:.05em; color:var(--muted);
-    text-transform:uppercase; margin-bottom:8px;
-  }
-  input[type=range]{
-    width:100%;
-    -webkit-appearance:none;
-    height:4px;
-    background:linear-gradient(90deg,var(--wire),#3a4046 50%,var(--needle));
-    border-radius:2px;
-    outline:none;
-  }
-  input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none;
-    width:18px;height:18px;border-radius:50%;
-    background:radial-gradient(circle at 35% 30%,var(--brass-light),var(--brass) 70%);
-    border:2px solid var(--ink);
-    cursor:pointer;
-    margin-top:-7px;
-  }
-  input[type=range]::-moz-range-thumb{
-    width:18px;height:18px;border-radius:50%;
-    background:radial-gradient(circle at 35% 30%,var(--brass-light),var(--brass) 70%);
-    border:2px solid var(--ink); cursor:pointer;
-  }
-
-  /* --- parts legend --- */
-  .legend{
-    margin-top:22px;
-    display:grid; grid-template-columns:1fr 1fr; gap:10px 18px;
-  }
-  .legend-item{
-    display:flex; gap:9px; align-items:flex-start;
-    font-size:12.5px; line-height:1.4;
-  }
-  .dot{
-    width:9px;height:9px;border-radius:50%;flex:none;margin-top:4px;
-    box-shadow:0 0 0 3px rgba(255,255,255,.04);
-  }
-  .legend-item b{color:var(--cream); font-weight:600;}
-  .legend-item span{color:var(--muted); display:block; font-size:11.5px;}
-
-  /* --- how it works --- */
-  .how{margin-top:30px;}
-  .how h2{
-    font-family:'Bebas Neue',sans-serif;
-    font-size:24px; letter-spacing:.03em;
-    color:var(--brass-light);
-    border-bottom:1px solid #2c3238;
-    padding-bottom:8px; margin-bottom:14px;
-  }
-  .steps{list-style:none; margin:0; padding:0;}
-  .steps li{
-    display:flex; gap:14px;
-    padding:12px 0;
-    border-bottom:1px dashed #262b30;
-  }
-  .steps li:last-child{border-bottom:none;}
-  .step-num{
-    font-family:'JetBrains Mono',monospace;
-    font-size:12px; color:var(--ink);
-    background:var(--brass-light);
-    width:24px;height:24px;border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    flex:none;
-  }
-  .step-txt b{display:block; color:var(--cream); font-size:14px; margin-bottom:2px;}
-  .step-txt span{color:var(--muted); font-size:12.5px; line-height:1.5;}
-
-  .formula{
-    margin-top:16px;
-    font-family:'JetBrains Mono',monospace;
-    font-size:13px; text-align:center;
-    background:var(--panel-2);
-    border:1px solid #2c3238;
-    border-radius:6px;
-    padding:12px;
-    color:var(--brass-light);
-  }
-  .formula span{color:var(--muted); display:block; font-size:10.5px; margin-top:4px;}
-
-  footer{
-    text-align:center; margin-top:26px;
-    font-family:'JetBrains Mono',monospace;
-    font-size:10px; letter-spacing:.2em; color:#4b5157;
-    text-transform:uppercase;
-  }
-
-  @media (prefers-reduced-motion:reduce){
-    .needle{transition:none;}
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moving-Coil Galvanometer Simulation</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="container">
+        <header>
+            <p class="subtitle">INSTRUMENT PLATE NO. 07</p>
+            <h1>กัลวานอมิเตอร์</h1>
+            <p class="desc">คลิกที่ส่วนประกอบด้านล่างเพื่อให้อวตารอธิบายการทำงาน</p>
+        </header>
 
-<div class="poster">
-  <header>
-    <div class="eyebrow">Instrument Plate No. 07</div>
-    <h1>กัลวาน<span>อมิเตอร์</span></h1>
-    <div class="sub">Moving-Coil Galvanometer · เครื่องมือวัดกระแสไฟฟ้าขนาดเล็ก</div>
-  </header>
+        <!-- ส่วนแสดงผลจำลอง -->
+        <div class="simulation-box">
+            <div class="poles">
+                <div class="pole n">N</div>
+                <div class="pole s">S</div>
+            </div>
+            
+            <div class="meter-face">
+                <div id="pointer" class="pointer"></div>
+                <div class="scale-marks">
+                    <span>-5</span><span>-4</span><span>-3</span><span>-2</span><span>-1</span>
+                    <span class="zero">0</span>
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                </div>
+            </div>
 
-  <div class="plate">
-    <div class="rivet" style="top:12px;left:12px;"></div>
-    <div class="rivet" style="top:12px;right:12px;"></div>
-    <div class="rivet" style="bottom:12px;left:12px;"></div>
-    <div class="rivet" style="bottom:12px;right:12px;"></div>
+            <div class="readouts">
+                <div class="readout-item">
+                    <span>ค่ากระแส</span>
+                    <strong id="current-val">-0.1 mA</strong>
+                </div>
+                <div class="readout-item">
+                    <span>ทิศทางแรงบิด</span>
+                    <strong id="direction-val" class="text-warning">← ทวนเข็ม</strong>
+                </div>
+                <div class="readout-item">
+                    <span>มุมเบี่ยงเบน</span>
+                    <strong id="angle-val">2°</strong>
+                </div>
+            </div>
+        </div>
 
-    <svg viewBox="0 0 400 240" id="gaugeSvg">
-      <defs>
-        <radialGradient id="brassGrad" cx="35%" cy="30%">
-          <stop offset="0%" stop-color="#e6c690"/>
-          <stop offset="100%" stop-color="#8a5f2c"/>
-        </radialGradient>
-        <marker id="arrowHead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill="#8b9096"/>
-        </marker>
-      </defs>
+        <!-- แผงควบคุมสไลเดอร์ -->
+        <div class="control-panel">
+            <label for="currentSlider">กระแสไฟฟ้าที่ป้อนเข้า (ลากเพื่อทดลอง)</label>
+            <input type="range" id="currentSlider" min="-5" max="5" step="0.1" value="-0.1">
+        </div>
 
-      <!-- horseshoe magnet -->
-      <path class="magnet-body" d="M90,60 A110,110 0 0,1 310,60 L310,95 A75,75 0 0,0 90,95 Z"/>
-      <rect class="pole" x="80" y="55" width="34" height="46" rx="4"/>
-      <rect class="pole-N" x="80" y="55" width="34" height="20" rx="4"/>
-      <text class="pole-label" x="97" y="70">N</text>
-      <rect class="pole" x="286" y="55" width="34" height="46" rx="4"/>
-      <rect class="pole-S" x="286" y="55" width="34" height="20" rx="4"/>
-      <text class="pole-label" x="303" y="70">S</text>
+        <!-- กล่องอวตารอธิบาย (Interactive Avatar Guide) -->
+        <div class="avatar-container" id="avatarBox">
+            <div class="avatar-img">🤖</div>
+            <div class="avatar-speech">
+                <span class="avatar-title" id="avatarTitle">ผู้ช่วยอัจฉริยะ พร้อมให้คำตอบ!</span>
+                <p id="avatarDesc">ลองคลิกที่การ์ดส่วนประกอบด้านล่างได้เลยครับ ผมจะอธิบายให้ฟังทีละส่วนว่าทำงานอย่างไร!</p>
+            </div>
+        </div>
 
-      <!-- field lines -->
-      <line class="field-arrow" x1="130" y1="80" x2="270" y2="80"/>
-      <line class="field-arrow" x1="130" y1="95" x2="270" y2="95"/>
-      <line class="field-arrow" x1="130" y1="110" x2="270" y2="110"/>
+        <!-- ส่วนประกอบหลัก (คลิกได้) -->
+        <section class="components-section">
+            <h2>คลิกเลือกส่วนประกอบเพื่อดูคำอธิบาย</h2>
+            <div class="grid-components">
+                <div class="comp-card clickable" data-part="pointer">
+                    <h3><span class="dot red"></span> เข็มชี้ (Pointer)</h3>
+                    <p>ยึดติดกับขดลวด เบี่ยงเบนตามมุมหมุน</p>
+                </div>
+                <div class="comp-card clickable" data-part="coil">
+                    <h3><span class="dot blue"></span> ขดลวด (Coil)</h3>
+                    <p>พันรอบแกนเหล็กอ่อน อยู่ในสนามแม่เหล็ก</p>
+                </div>
+                <div class="comp-card clickable" data-part="magnet">
+                    <h3><span class="dot gray"></span> แม่เหล็กถาวร N-S</h3>
+                    <p>สร้างสนามแม่เหล็กคงที่ให้กับระบบ</p>
+                </div>
+                <div class="comp-card clickable" data-part="spring">
+                    <h3><span class="dot orange"></span> สปริงก้นหอย (Hairspring)</h3>
+                    <p>ต้านแรงบิด ดึงเข็มกลับสู่จุดศูนย์</p>
+                </div>
+            </div>
+        </section>
 
-      <!-- soft iron core -->
-      <circle class="core" cx="200" cy="105" r="26"/>
-
-      <!-- coil loops (animated stroke colour = current) -->
-      <g id="coilGroup">
-        <ellipse class="coil-loop" cx="200" cy="105" rx="36" ry="14"/>
-        <ellipse class="coil-loop" cx="200" cy="105" rx="36" ry="14" transform="rotate(60 200 105)"/>
-        <ellipse class="coil-loop" cx="200" cy="105" rx="36" ry="14" transform="rotate(120 200 105)"/>
-      </g>
-
-      <!-- scale arc -->
-      <path class="scale-arc" d="M100,190 A100,100 0 0,1 300,190"/>
-      <!-- ticks + labels -->
-      <g id="ticks"></g>
-
-      <!-- pivot + needle -->
-      <line class="needle" id="needle" x1="200" y1="190" x2="200" y2="108"/>
-      <circle class="pivot-cap" cx="200" cy="190" r="9"/>
-    </svg>
-
-    <div class="readout-row">
-      <div class="readout">ค่ากระแส<br><b id="curVal">0.0 mA</b></div>
-      <div class="readout dir">ทิศทางแรงบิด<br><b id="dirVal">สมดุล</b></div>
-      <div class="readout">มุมเบี่ยงเบน<br><b id="angVal">0°</b></div>
+        <!-- หลักการทำงาน -->
+        <section class="principles-section">
+            <h2>หลักการทำงานภาพรวม</h2>
+            <ul class="step-list">
+                <li>
+                    <span class="step-num">1</span>
+                    <div><strong>กระแสไหลผ่านขดลวด:</strong> กระแสไฟฟ้าไหลเข้าสู่ขดลวดตัวนำ</div>
+                </li>
+                <li>
+                    <span class="step-num">2</span>
+                    <div><strong>เกิดแรงกระทำ:</strong> ตามสูตร F = BIL ที่ด้านข้างของขดลวด</div>
+                </li>
+                <li>
+                    <span class="step-num">3</span>
+                    <div><strong>เกิดแรงบิดหมุน:</strong> โมเมนต์คู่ควบทำให้ขดลวดและเข็มหมุนไป</div>
+                </li>
+                <li>
+                    <span class="step-num">4</span>
+                    <div><strong>สปริงต้านสมดุล:</strong> เข็มหยุดนิ่งเมื่อแรงบิดสปริงเท่ากับแรงแม่เหล็ก</div>
+                </li>
+            </ul>
+        </section>
     </div>
-  </div>
 
-  <div class="control">
-    <label>กระแสไฟฟ้าที่ป้อนเข้า (ลากเพื่อทดลอง) <span id="labelVal">0 mA</span></label>
-    <input type="range" id="currentSlider" min="-5" max="5" step="0.1" value="0">
-  </div>
-
-  <div class="legend">
-    <div class="legend-item"><div class="dot" style="background:var(--needle)"></div>
-      <div><b>เข็มชี้ (Pointer)</b><span>ยึดติดกับแกนขดลวด เบี่ยงเบนตามมุมหมุน</span></div></div>
-    <div class="legend-item"><div class="dot" style="background:var(--wire)"></div>
-      <div><b>ขดลวด (Coil)</b><span>พันรอบแกนเหล็กอ่อน อยู่ในสนามแม่เหล็ก</span></div></div>
-    <div class="legend-item"><div class="dot" style="background:var(--wire-hot)"></div>
-      <div><b>แม่เหล็กถาวร N–S</b><span>สร้างสนามแม่เหล็กคงที่รอบขดลวด</span></div></div>
-    <div class="legend-item"><div class="dot" style="background:var(--brass)"></div>
-      <div><b>สปริงก้นหอย (Hairspring)</b><span>ต้านแรงบิด ดึงเข็มกลับสู่ศูนย์เมื่อไม่มีกระแส</span></div></div>
-  </div>
-
-  <div class="how">
-    <h2>หลักการทำงาน</h2>
-    <ul class="steps">
-      <li><div class="step-num">1</div><div class="step-txt">
-        <b>กระแสไหลผ่านขดลวด</b>
-        <span>กระแสไฟฟ้าที่ต้องการวัดไหลเข้าสู่ขดลวดซึ่งพันอยู่บนแกนเหล็กอ่อน</span>
-      </div></li>
-      <li><div class="step-num">2</div><div class="step-txt">
-        <b>เกิดแรงกระทำต่อขดลวด</b>
-        <span>เมื่อขดลวดมีกระแสอยู่ในสนามแม่เหล็ก จะเกิดแรง F = BIL กระทำที่ด้านทั้งสองของขดลวด</span>
-      </div></li>
-      <li><div class="step-num">3</div><div class="step-txt">
-        <b>เกิดแรงบิดหมุนขดลวด</b>
-        <span>แรงทั้งสองด้านทำให้เกิดโมเมนต์คู่ควบ หมุนขดลวดและเข็มที่ยึดติดกัน</span>
-      </div></li>
-      <li><div class="step-num">4</div><div class="step-txt">
-        <b>สปริงต้านจนเข็มหยุดนิ่ง</b>
-        <span>สปริงก้นหอยสร้างแรงบิดต้าน เข็มจึงหยุดที่ตำแหน่งซึ่งแรงบิดทั้งสองเท่ากัน มุมเบี่ยงเบนแปรผันตรงกับกระแส</span>
-      </div></li>
-    </ul>
-    <div class="formula">
-      θ ∝ I &nbsp;&nbsp;→&nbsp;&nbsp; τ<sub>เกิด</sub> = NBIA = τ<sub>สปริง</sub> = kθ
-      <span>มุมเบี่ยงเบน (θ) แปรผันตรงกับกระแส (I) — จึงใช้สเกลเชิงเส้นอ่านค่าได้โดยตรง</span>
-    </div>
-  </div>
-
-  <footer>Interactive teaching plate · แตะเพื่อทดลองปรับกระแส</footer>
-</div>
-
-<script>
-  const svgNS = "http://www.w3.org/2000/svg";
-  const ticksGroup = document.getElementById('ticks');
-  const cx = 200, cy = 190, r = 100;
-  // build ticks from -5 to 5, angle range 180deg (left) to 0deg (right) mapped onto arc 100..300
-  for(let v=-5; v<=5; v++){
-    const t = (v+5)/10; // 0..1
-    const angle = Math.PI - t*Math.PI; // 180deg -> 0deg
-    const major = (v % 5 === 0);
-    const inner = major ? r-12 : r-7;
-    const x1 = cx + r*Math.cos(angle);
-    const y1 = cy - r*Math.sin(angle);
-    const x2 = cx + inner*Math.cos(angle);
-    const y2 = cy - inner*Math.sin(angle);
-    const line = document.createElementNS(svgNS,'line');
-    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
-    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
-    line.setAttribute('class','tick'+(major?' major':''));
-    ticksGroup.appendChild(line);
-
-    const lx = cx + (r+14)*Math.cos(angle);
-    const ly = cy - (r+14)*Math.sin(angle);
-    const text = document.createElementNS(svgNS,'text');
-    text.setAttribute('x',lx); text.setAttribute('y',ly+3);
-    text.setAttribute('class','tick-label'+(v===0?' zero-label':''));
-    text.textContent = v;
-    ticksGroup.appendChild(text);
-  }
-
-  const slider = document.getElementById('currentSlider');
-  const needle = document.getElementById('needle');
-  const curVal = document.getElementById('curVal');
-  const dirVal = document.getElementById('dirVal');
-  const angVal = document.getElementById('angVal');
-  const labelVal = document.getElementById('labelVal');
-  const coilLoops = document.querySelectorAll('.coil-loop');
-
-  function update(){
-    const v = parseFloat(slider.value); // -5..5 mA
-    const maxDeg = 80; // full-scale mechanical deflection
-    const deg = (v/5)*maxDeg;
-    needle.style.transform = `rotate(${deg}deg)`;
-
-    curVal.textContent = v.toFixed(1) + ' mA';
-    labelVal.textContent = v.toFixed(1) + ' mA';
-    angVal.textContent = Math.abs(deg).toFixed(0) + '°';
-    dirVal.textContent = v > 0.05 ? 'ตามเข็ม →' : (v < -0.05 ? '← ทวนเข็ม' : 'สมดุล');
-
-    const hot = Math.abs(v) > 0.05;
-    coilLoops.forEach(l => l.classList.toggle('hot', hot));
-  }
-  slider.addEventListener('input', update);
-  update();
-</script>
-
+    <script src="script.js"></script>
 </body>
 </html>
-
