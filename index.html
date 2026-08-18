@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Galvanometer Core Mechanism 3D</title>
+    <title>Realistic Physics Galvanometer 3D</title>
     <!-- โหลด Three.js และ OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -153,11 +153,11 @@
     <!-- แผงควบคุมด้านบน -->
     <div class="control-panel">
         <div class="header-row">
-            <h1>กลไกภายในกัลวานอมิเตอร์ (Core Mechanism)</h1>
+            <h1>กัลวานอมิเตอร์ (จำลองการขยับสมจริงแบบฟิสิกส์สปริง)</h1>
             <span id="currentReadout" class="live-value">0.0 mA</span>
         </div>
         <div class="slider-group">
-            <label for="currentSlider">ป้อนกระแสไฟฟ้า (ดูการเบี่ยงเบนของขดลวดและเข็มยาว):</label>
+            <label for="currentSlider">ป้อนกระแสไฟฟ้า (สังเกตความหน่วงและการกระดอนของเข็ม):</label>
             <input type="range" id="currentSlider" min="-5" max="5" step="0.1" value="0">
         </div>
     </div>
@@ -167,7 +167,7 @@
         <div class="avatar-img">🤖</div>
         <div class="avatar-speech">
             <span class="avatar-title" id="avatarTitle">ผู้ช่วยอัจฉริยะ 3D</span>
-            <p class="avatar-desc" id="avatarDesc">นี่คือแก่นสำคัญภายในครับ! ลองขยับสไลเดอร์ หรือแตะที่ชิ้นส่วนต่างๆ เพื่อดูคำอธิบายได้เลย</p>
+            <p class="avatar-desc" id="avatarDesc">ลองลากสไลเดอร์เร็วๆ จะเห็นเข็มสะบัดและกระดอนเหมือนเครื่องมือวัดจริงเลยครับ! และแตะชิ้นส่วนเพื่อดูคำอธิบายได้เลย</p>
         </div>
     </div>
 
@@ -254,12 +254,12 @@
 
             ctx.font = 'bold 12px Arial';
             ctx.fillStyle = '#555555';
-            ctx.fillText('MOVING-COIL CORE', 256, 110);
+            ctx.fillText('REALISTIC METER CORE', 256, 110);
             ctx.fillText('mA', 256, 135);
             return new THREE.CanvasTexture(canvas);
         }
 
-        // 5. ประกอบเฉพาะชิ้นส่วนสำคัญด้านใน
+        // 5. ประกอบชิ้นส่วนสำคัญด้านใน
         const coreGroup = new THREE.Group();
         scene.add(coreGroup);
 
@@ -272,19 +272,18 @@
             return mesh;
         }
 
-        // A. หน้าปัดสเกล (วางไว้ด้านหลังเข็มเพื่ออ้างอิงตำแหน่ง)
+        // A. หน้าปัดสเกล
         const scaleMat = new THREE.MeshBasicMaterial({ map: createScaleTexture(), transparent: true });
         const scaleMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.8), scaleMat);
         scaleMesh.position.set(0, 0.8, -0.2);
         addCorePart(scaleMesh, "scale");
 
-        // B. แม่เหล็กถาวร พร้อมป้าย N และ S ชัดเจน
+        // B. แม่เหล็กถาวร N และ S
         const magnetGeo = new THREE.BoxGeometry(1.0, 1.8, 1.2);
         
-        // ขั้วเหนือ N
         const magnetN = new THREE.Mesh(magnetGeo, [
             new THREE.MeshStandardMaterial({color: 0xcc3333}),
-            createPoleTexture('N', '#cc3333'), // ด้านในหันเข้าแกน
+            createPoleTexture('N', '#cc3333'),
             new THREE.MeshStandardMaterial({color: 0xcc3333}),
             new THREE.MeshStandardMaterial({color: 0xcc3333}),
             new THREE.MeshStandardMaterial({color: 0xcc3333}),
@@ -293,9 +292,8 @@
         magnetN.position.set(-1.4, 0, 0);
         addCorePart(magnetN, "magnetN");
 
-        // ขั้วใต้ S
         const magnetS = new THREE.Mesh(magnetGeo, [
-            createPoleTexture('S', '#3366cc'), // ด้านในหันเข้าแกน
+            createPoleTexture('S', '#3366cc'),
             new THREE.MeshStandardMaterial({color: 0x3366cc}),
             new THREE.MeshStandardMaterial({color: 0x3366cc}),
             new THREE.MeshStandardMaterial({color: 0x3366cc}),
@@ -305,13 +303,13 @@
         magnetS.position.set(1.4, 0, 0);
         addCorePart(magnetS, "magnetS");
 
-        // C. แกนเหล็กอ่อนตรงกลาง
+        // C. แกนเหล็กอ่อน
         const coreMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
         const coreMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.5, 32), coreMat);
         coreMesh.position.set(0, 0, 0);
         addCorePart(coreMesh, "core");
 
-        // D. ชุดเคลื่อนที่ (ขดลวด + เข็มยาวพิเศษ + สปริง)
+        // D. ชุดเคลื่อนที่ (ขดลวด + เข็มยาว + สปริง)
         const movingGroup = new THREE.Group();
         movingGroup.position.set(0, 0, 0);
         coreGroup.add(movingGroup);
@@ -321,14 +319,12 @@
         coilMesh.name = "coil";
         movingGroup.add(coilMesh);
 
-        // เข็มชี้ขนาดยยาวพิเศษ
         const pointerMat = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x331111 });
         const pointerMesh = new THREE.Mesh(new THREE.BoxGeometry(0.04, 4.0, 0.04), pointerMat);
         pointerMesh.position.set(0, 2.0, 0.4);
         pointerMesh.name = "pointer";
         movingGroup.add(pointerMesh);
 
-        // สปริงก้นหอย
         const springMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.7 });
         const springMesh = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.04, 16, 40), springMat);
         springMesh.position.set(0, -0.8, 0);
@@ -336,25 +332,32 @@
         springMesh.name = "spring";
         movingGroup.add(springMesh);
 
-        // 6. ข้อมูลคำอธิบายชิ้นส่วนภายใน
+        // 6. ข้อมูลคำอธิบายชิ้นส่วน
         const explanations = {
-            scale: { title: "หน้าปัดสเกลอ้างอิง (Scale Plate)", desc: "แผ่นสเกลแสดงค่ามิลลิแอมป์ (mA) มีเลข 0 อยู่ตรงกลางเพื่อบอกทิศทางการเบี่ยงเบนครับ" },
-            magnetN: { title: "แม่เหล็กถาวร ขั้วเหนือ [ N ]", desc: "ขั้วแม่เหล็กสีแดงมีอักษร [ N ] ชัดเจน ทำหน้าที่ปล่อยเส้นแรงแม่เหล็กออกสู่สนามแม่เหล็กภายใน" },
-            magnetS: { title: "แม่เหล็กถาวร ขั้วใต้ [ S ]", desc: "ขั้วแม่เหล็กสีน้ำเงินมีอักษร [ S ] ทำหน้าที่รับเส้นแรงแม่เหล็กให้ครบวงจร" },
-            core: { title: "แกนเหล็กอ่อน (Soft Iron Core)", desc: "ทรงกระบอกเหล็กตรงกลาง ช่วยรวมและกระจายเส้นแรงแม่เหล็กให้ตัดกับขดลวดอย่างสม่ำเสมอ" },
-            coil: { title: "ขดลวดเคลื่อนที่ (Moving Coil)", desc: "ขดลวดทองแดงที่เมื่อมีกระแสไฟฟ้าไหลผ่าน จะเกิดแรงแม่เหล็กไฟฟ้าผลักดันให้เกิดการบิดหมุน" },
-            pointer: { title: "เข็มชี้ขนาดยาวพิเศษ (Pointer)", desc: "ยึดติดกับแกนขดลวด เข็มยาวนี้จะกวาดไปบนสเกลเพื่อแสดงค่ากระแสไฟฟ้าที่เปลี่ยนแปลงทันที" },
-            spring: { title: "สปริงก้นหอย (Hairspring)", desc: "สร้างแรงบิดต้านเพื่อให้เข็มหยุดนิ่งในตำแหน่งที่ถูกต้อง และดึงเข็มกลับสู่ศูนย์ (0) เมื่อหยุดจ่ายไฟ" }
+            scale: { title: "หน้าปัดสเกล (Scale Plate)", desc: "แสดงค่าหน่วยมิลลิแอมป์ พร้อมขีดเลข 0 ตรงกลางเพื่อบอกทิศทางการเบี่ยงเบนของกระแสไฟฟ้า" },
+            magnetN: { title: "แม่เหล็กถาวร ขั้วเหนือ [ N ]", desc: "ขั้วแม่เหล็กสีแดงปล่อยเส้นแรงแม่เหล็กเพื่อเหนี่ยวนำให้เกิดสนามแม่เหล็กภายใน" },
+            magnetS: { title: "แม่เหล็กถาวร ขั้วใต้ [ S ]", desc: "ขั้วแม่เหล็กสีน้ำเงินรับเส้นแรงแม่เหล็กให้ครบวงจรสมบูรณ์" },
+            core: { title: "แกนเหล็กอ่อน (Soft Iron Core)", desc: "ช่วยกระจายเส้นแรงแม่เหล็กให้ตัดกับขดลวดในแนวรัศมีอย่างสม่ำเสมอ" },
+            coil: { title: "ขดลวดเคลื่อนที่ (Moving Coil)", desc: "เมื่อมีกระแสไฟฟ้าไหลผ่าน จะเกิดแรงแม่เหล็กไฟฟ้า (F = BIL) ดึงดูดและผลักดันให้เกิดการบิดตัว" },
+            pointer: { title: "เข็มชี้ (Pointer - ขยับสมจริง)", desc: "ยึดติดกับแกนขดลวด มีระบบฟิสิกส์สปริงทำให้เข็มสะบัดและกระดอนสมจริงเวลาเปลี่ยนค่ากระแส" },
+            spring: { title: "สปริงก้นหอย (Hairspring)", desc: "สร้างแรงบิดต้าน (Restoring Torque) เพื่อดึงเข็มกลับสู่ศูนย์เมื่อไม่มีกระแสและช่วยสร้างจุดสมดุล" }
         };
 
-        // 7. ระบบควบคุมการขยับเข็มตามสไลเดอร์
+        // 7. ระบบฟิสิกส์การขยับเข็มแบบสปริงสมจริง (Spring-Damper Physics System)
         const slider = document.getElementById('currentSlider');
         const currentReadout = document.getElementById('currentReadout');
-        let currentVal = 0;
+        
+        let targetCurrent = 0;
+        let currentAngle = 0;
+        let needleVelocity = 0;
+        
+        // ค่าพารามิเตอร์ฟิสิกส์สปริง
+        const springStiffness = 0.08; // ความแข็งของสปริง (ความไว)
+        const dampingFactor = 0.22;   // ความหน่วง (แรงเสียดทานไม่ให้เข็มแกว่งไม่รู้จบ)
 
         slider.addEventListener('input', (e) => {
-            currentVal = parseFloat(e.target.value);
-            currentReadout.textContent = `${currentVal > 0 ? '+' : ''}${currentVal.toFixed(1)} mA`;
+            targetCurrent = parseFloat(e.target.value);
+            currentReadout.textContent = `${targetCurrent > 0 ? '+' : ''}${targetCurrent.toFixed(1)} mA`;
         });
 
         // 8. ระบบตรวจจับการแตะ/คลิกวัตถุ 3D
@@ -429,13 +432,25 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // 9. ลูปการแสดงผล 3D
+        // 9. ลูปการแสดงผล 3D พร้อมคำนวณฟิสิกส์การเคลื่อนที่ของเข็ม
         function animate() {
             requestAnimationFrame(animate);
 
-            // คำนวณมุมเข็มตามสไลเดอร์กระแสไฟฟ้า
-            const targetAngle = - (currentVal / 5) * 0.6;
-            movingGroup.rotation.y += (targetAngle - movingGroup.rotation.y) * 0.1;
+            // คำนวณมุมเป้าหมายจากค่ากระแสไฟฟ้า
+            const targetAngle = - (targetCurrent / 5) * 0.6;
+
+            // คำนวณระบบฟิสิกส์สปริง (Hooke's Law + Damping)
+            const displacement = targetAngle - currentAngle;
+            const springForce = displacement * springStiffness;
+            
+            needleVelocity += springForce;
+            needleVelocity *= (1 - dampingFactor); // ลดความเร็วลงทีละน้อยตามความหน่วง
+            currentAngle += needleVelocity;
+
+            // นำมุมไปหมุนชุดเคลื่อนที่ (ขดลวด + เข็ม + สปริง)
+            movingGroup.rotation.y = currentAngle;
+            // ให้สปริงก้นหอยบิดตัวตามมุมเข็มเล็กน้อยเพิ่มความสมจริง
+            springMesh.rotation.z = currentAngle * 0.5;
 
             controls.update();
             renderer.render(scene, camera);
