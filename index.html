@@ -2,18 +2,18 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Moving-Coil Galvanometer Simulation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Mobile Galvanometer Simulation</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     
     <style>
         :root {
             --bg-color: #121212;
-            --card-bg: rgba(30, 30, 30, 0.85);
+            --card-bg: rgba(25, 25, 25, 0.9);
             --accent-gold: #e2b774;
             --text-main: #e0e0e0;
-            --text-muted: #888888;
+            --text-muted: #aaaaaa;
         }
 
         body, html {
@@ -25,6 +25,8 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         #canvas-container {
@@ -36,59 +38,58 @@
             z-index: 1;
         }
 
-        /* UI Overlay ด้านบนซ้าย */
-        .ui-panel {
+        /* ส่วนหัวด้านบน (Mobile Optimized) */
+        .header-panel {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 320px;
+            top: 15px;
+            left: 15px;
+            right: 15px;
             z-index: 10;
-            pointer-events: none; /* ให้คลิกทะลุไปหมุน 3D ได้ */
-        }
-
-        .header-box {
             background: var(--card-bg);
             backdrop-filter: blur(10px);
             border: 1px solid #333;
-            padding: 15px 20px;
+            padding: 10px 15px;
             border-radius: 12px;
-            margin-bottom: 15px;
-            pointer-events: auto;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            pointer-events: none;
         }
 
         h1 {
             color: var(--accent-gold);
-            font-size: 1.2rem;
-            margin: 0 0 5px 0;
+            font-size: 1rem;
+            margin: 0 0 2px 0;
         }
 
         p {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
             margin: 0;
-            line-height: 1.4;
         }
 
-        /* กล่องอวตารผู้ช่วยอธิบาย */
+        /* กล่องอวตารด้านล่าง (Mobile Bottom Sheet Style) */
         .avatar-container {
+            position: absolute;
+            bottom: 20px;
+            left: 15px;
+            right: 15px;
+            z-index: 10;
             background: linear-gradient(135deg, #1e1e1e, #141414);
             border: 2px solid var(--accent-gold);
-            border-radius: 12px;
-            padding: 15px;
+            border-radius: 14px;
+            padding: 12px 15px;
             display: flex;
             align-items: center;
-            gap: 15px;
-            pointer-events: auto;
-            box-shadow: 0 4px 25px rgba(226, 183, 116, 0.2);
+            gap: 12px;
+            box-shadow: 0 6px 25px rgba(226, 183, 116, 0.25);
             transition: transform 0.2s ease;
         }
 
         .avatar-img {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             background: #2a2a2a;
-            width: 55px;
-            height: 55px;
+            width: 48px;
+            height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -99,36 +100,22 @@
 
         .avatar-speech {
             flex-grow: 1;
+            overflow: hidden;
         }
 
         .avatar-title {
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-weight: bold;
             color: var(--accent-gold);
             display: block;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .avatar-desc {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #ccc;
             margin: 0;
-        }
-
-        /* คำแนะนำวิธีใช้ด้านล่าง */
-        .hint-footer {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            color: var(--accent-gold);
-            z-index: 10;
-            border: 1px solid #444;
-            pointer-events: none;
+            line-height: 1.3;
         }
     </style>
 </head>
@@ -136,22 +123,18 @@
 
     <div id="canvas-container"></div>
 
-    <div class="ui-panel">
-        <div class="header-box">
-            <h1>กัลวานอมิเตอร์ 3 มิติ</h1>
-            <p>หมุนโมเดลด้วยการคลิกเมาส์ค้างไว้และลาก | ซูมด้วย Scroll</p>
-        </div>
-
-        <div class="avatar-container" id="avatarBox">
-            <div class="avatar-img">🤖</div>
-            <div class="avatar-speech">
-                <span class="avatar-title" id="avatarTitle">ผู้ช่วยอัจฉริยะ 3D</span>
-                <p class="avatar-desc" id="avatarDesc">คลิกที่ชิ้นส่วนใดก็ได้ในโมเดล 3D ด้านหลังนี้ เพื่อดูคำอธิบายหลักการทำงานครับ!</p>
-            </div>
-        </div>
+    <div class="header-panel">
+        <h1>กัลวานอมิเตอร์ 3 มิติ</h1>
+        <p>แตะวัตถุใน 3D เพื่อดูคำอธิบาย | ใช้ 1 นิ้วหมุน / 2 นิ้วซูม</p>
     </div>
 
-    <div class="hint-footer">💡 คลิกที่ชิ้นส่วน 3D เพื่อให้อวตารอธิบาย</div>
+    <div class="avatar-container" id="avatarBox">
+        <div class="avatar-img">🤖</div>
+        <div class="avatar-speech">
+            <span class="avatar-title" id="avatarTitle">ผู้ช่วยอัจฉริยะมือถือ</span>
+            <p class="avatar-desc" id="avatarDesc">จิ้มที่ชิ้นส่วนต่างๆ ในโมเดล 3D ด้านหลังได้เลยครับ!</p>
+        </div>
+    </div>
 
     <script>
         // 1. ตั้งค่า Scene, Camera, Renderer (Three.js)
@@ -164,32 +147,23 @@
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // ป้องกันกระตุกบนมือถือจอความละเอียดสูง
         container.appendChild(renderer.domElement);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
 
-        // 2. จัดการแสงสว่าง
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
-
+        // 2. แสงสว่าง
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
         const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
         dirLight.position.set(5, 10, 7);
         scene.add(dirLight);
 
-        // Grid ช่วยมองทิศทาง
-        const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
-        gridHelper.position.y = -1.5;
-        scene.add(gridHelper);
-
-        // กลุ่มเก็บชิ้นส่วนกัลวานอมิเตอร์ทั้งหมด
+        // 3. สร้างกลุ่มชิ้นส่วนกัลวานอมิเตอร์
         const galvanometerGroup = new THREE.Group();
         scene.add(galvanometerGroup);
 
-        // 3. สร้างชิ้นส่วน 3D ของกัลวานอมิเตอร์
-        // ฟังก์ชันช่วยสร้าง Mesh พร้อมกำหนดชื่อ (Name) สำหรับให้ Raycaster ตรวจจับการคลิก
         function createMesh(geometry, material, x, y, z, name) {
             const mesh = new THREE.Mesh(geometry, material);
             mesh.position.set(x, y, z);
@@ -198,96 +172,70 @@
             return mesh;
         }
 
-        // A. แม่เหล็กถาวรขั้วเหนือ (N Pole - แดง)
-        const magnetMatN = new THREE.MeshStandardMaterial({ color: 0xcc3333, roughness: 0.3 });
-        createMesh(new THREE.BoxGeometry(1.2, 2.2, 1.5), magnetMatN, -1.8, 0, 0, "magnet");
+        // ประกอบร่าง 3D
+        createMesh(new THREE.BoxGeometry(1.2, 2.2, 1.5), new THREE.MeshStandardMaterial({ color: 0xcc3333, roughness: 0.3 }), -1.8, 0, 0, "magnet");
+        createMesh(new THREE.BoxGeometry(1.2, 2.2, 1.5), new THREE.MeshStandardMaterial({ color: 0x3366cc, roughness: 0.3 }), 1.8, 0, 0, "magnet");
+        createMesh(new THREE.CylinderGeometry(0.5, 0.5, 1.8, 32), new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 }), 0, 0, 0, "core");
+        createMesh(new THREE.BoxGeometry(0.9, 1.6, 0.9), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9 }), 0, 0, 0, "coil");
+        createMesh(new THREE.CylinderGeometry(0.03, 0.03, 3.5), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0, 1.8, 0, "pointer");
+        createMesh(new THREE.TorusGeometry(0.4, 0.05, 16, 50), new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.7 }), 0, -1.0, 0, "spring");
 
-        // B. แม่เหล็กถาวรขั้วใต้ (S Pole - น้ำเงิน)
-        const magnetMatS = new THREE.MeshStandardMaterial({ color: 0x3366cc, roughness: 0.3 });
-        createMesh(new THREE.BoxGeometry(1.2, 2.2, 1.5), magnetMatS, 1.8, 0, 0, "magnet");
-
-        // C. แกนเหล็กอ่อนตรงกลาง (Soft Iron Core)
-        const coreMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
-        createMesh(new THREE.CylinderGeometry(0.5, 0.5, 1.8, 32), coreMat, 0, 0, 0, "core");
-
-        // D. ขดลวดตัวนำ (Moving Coil)
-        const coilMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.1 });
-        createMesh(new THREE.BoxGeometry(0.9, 1.6, 0.9), coilMat, 0, 0, 0, "coil");
-
-        // E. เข็มชี้ (Pointer)
-        const pointerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x331111 });
-        createMesh(new THREE.CylinderGeometry(0.03, 0.03, 3.5), pointerMat, 0, 1.8, 0, "pointer");
-
-        // F. สปริงก้นหอย (Hairspring - ด้านล่าง)
-        const springMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.7 });
-        createMesh(new THREE.TorusGeometry(0.4, 0.05, 16, 50), springMat, 0, -1.0, 0, "spring");
-
-        // 4. ข้อมูลคำอธิบายของอวตารแต่ละชิ้นส่วน
+        // 4. ข้อมูลคำอธิบายของอวตาร
         const explanations = {
-            magnet: {
-                title: "แม่เหล็กถาวร (Permanent Magnet N-S)",
-                desc: "ทำหน้าที่สร้างสนามแม่เหล็กถาวรความเข้มสูง พุ่งผ่านขดลวดที่อยู่ตรงกลาง เพื่อทำให้เกิดแรงแม่เหล็กไฟฟ้าขึ้นเมื่อมีกระแสไฟฟ้าไหลผ่านครับ"
-            },
-            core: {
-                title: "แกนเหล็กอ่อน (Soft Iron Core)",
-                desc: "วางอยู่ตรงกลางขดลวด ช่วยบังคับเส้นแรงแม่เหล็กให้ตัดกับขดลวดในแนวรัศมีอย่างสม่ำเสมอ ทำให้ค่าความไวในการวัดคงที่ครับ"
-            },
-            coil: {
-                title: "ขดลวดเคลื่อนที่ (Moving Coil)",
-                desc: "พันรอบแกนเหล็กอ่อน เมื่อมีกระแสไฟฟ้าไหลเข้า จะเกิดแรงทางแม่เหล็ก (F = BIL) ดึงดูดและผลักดันให้เกิดโมเมนต์คู่ควบทำให้ขดลวดหมุนตัว"
-            },
-            pointer: {
-                title: "เข็มชี้ (Pointer)",
-                desc: "ยึดติดอยู่กับแกนหมุนของขดลวด เมื่อขดลวดหมุน เข็มชี้จะเบี่ยงเบนไปบนสเกลหน้าปัดเพื่อแสดงค่ากระแสไฟฟ้าที่วัดได้"
-            },
-            spring: {
-                title: "สปริงก้นหอย (Hairspring)",
-                desc: "ทำหน้าที่สร้าง 'แรงบิดต้าน' คอยดึงเข็มชี้ให้กลับสู่ตำแหน่งศูนย์ (0) เมื่อไม่มีกระแส และสร้างจุดสมดุลทำให้เข็มหยุดนิ่งได้อย่างแม่นยำ"
-            }
+            magnet: { title: "แม่เหล็กถาวร (Permanent Magnet)", desc: "สร้างสนามแม่เหล็กเข้มข้นเพื่อส่งแรงไปกระทำกับขดลวดตรงกลางครับ" },
+            core: { title: "แกนเหล็กอ่อน (Soft Iron Core)", desc: "ช่วยบังคับเส้นแรงแม่เหล็กให้ตัดกับขดลวดในแนวรัศมีอย่างสม่ำเสมอครับ" },
+            coil: { title: "ขดลวด (Moving Coil)", desc: "จุดที่กระแสไฟฟ้าไหลผ่าน เมื่อเจอสนามแม่เหล็กจะทำให้เกิดแรงบิดหมุนครับ" },
+            pointer: { title: "เข็มชี้ (Pointer)", desc: "ยึดติดกับแกนหมุน เบี่ยงเบนไปตามค่ากระแสไฟฟ้าที่ไหลผ่านครับ" },
+            spring: { title: "สปริงก้นหอย (Hairspring)", desc: "สร้างแรงบิดต้านและดึงเข็มกลับสู่ตำแหน่งศูนย์ (0) เมื่อไม่มีกระแสครับ" }
         };
 
-        // 5. ระบบตรวจจับการคลิกวัตถุ 3D (Raycaster)
+        // 5. ระบบรองรับทั้ง Touch (มือถือ) และ Click (คอมพิวเตอร์)
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        window.addEventListener('click', (event) => {
-            // แปลงพิกัดเมาส์ให้อยู่ในช่วง -1 ถึง 1
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        function handleTouchOrClick(clientX, clientY) {
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(galvanometerGroup.children);
 
             if (intersects.length > 0) {
-                const clickedObject = intersects[0].object;
-                const partName = clickedObject.name;
-
+                const partName = intersects[0].object.name;
                 if (explanations[partName]) {
-                    // อัปเดตข้อความในกล่องอวตาร
                     document.getElementById('avatarTitle').textContent = explanations[partName].title;
                     document.getElementById('avatarDesc').textContent = explanations[partName].desc;
 
-                    // ทำอนิเมชั่นกระพริบเบาๆ ที่กล่องอวตาร
+                    // เอฟเฟกต์กระพริบเบาๆ ที่กล่องอวตาร
                     const box = document.getElementById('avatarBox');
-                    box.style.transform = "scale(1.03)";
-                    setTimeout(() => {
-                        box.style.transform = "scale(1)";
-                    }, 150);
+                    box.style.transform = "scale(1.02)";
+                    setTimeout(() => box.style.transform = "scale(1)", 150);
 
-                    // ทำไฮไลท์วัตถุที่ถูกคลิกชั่วคราว
-                    highlightObject(clickedObject);
+                    highlightObject(intersects[0].object);
                 }
+            }
+        }
+
+        // รองรับการแตะหน้าจอมือถือ (Touch)
+        window.addEventListener('touchend', (event) => {
+            if (event.changedTouches.length > 0) {
+                const touch = event.changedTouches[0];
+                handleTouchOrClick(touch.clientX, touch.clientY);
             }
         });
 
-        // ฟังก์ชันเปลี่ยนสีชั่วคราวเมื่อถูกคลิก
+        // รองรับการคลิกด้วยเมาส์ปกติ
+        window.addEventListener('click', (event) => {
+            handleTouchOrClick(event.clientX, event.clientY);
+        });
+
+        // ฟังก์ชันไฮไลท์ชิ้นส่วนเมื่อถูกเลือก
         let previousMaterial = null;
         let selectedObject = null;
         const highlightMat = new THREE.MeshStandardMaterial({ color: 0xffe600, emissive: 0x554400 });
 
         function highlightObject(obj) {
             if (selectedObject && selectedObject !== obj) {
-                // คืนค่าวัสดุเดิมของชิ้นก่อนหน้า
                 selectedObject.material = previousMaterial;
             }
             if (selectedObject !== obj) {
@@ -300,26 +248,20 @@
                         obj.material = previousMaterial;
                         selectedObject = null;
                     }
-                }, 800);
+                }, 1000);
             }
         }
 
-        // ปรับขนาดหน้าจออัตโนมัติ
+        // ปรับขนาดหน้าจออัตโนมัติเมื่อหมุนจอมือถือ (Orientation Change)
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // 6. ลูปการแสดงผล (Animation Loop)
+        // 6. ลูปการแสดงผล 3D
         function animate() {
             requestAnimationFrame(animate);
-            
-            // ให้โมเดลหมุนช้าๆ เสริมความสมจริง (หยุดหมุนชั่วคราวเมื่อผู้ใช้กำลังใช้เมาส์หมุน)
-            if (!controls.state == -1) {
-                galvanometerGroup.rotation.y += 0.002;
-            }
-
             controls.update();
             renderer.render(scene, camera);
         }
