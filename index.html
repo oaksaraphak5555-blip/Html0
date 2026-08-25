@@ -1,67 +1,827 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <title>โมเดล 2D กัลวานอมิเตอร์ (Galvanometer)</title>
-    <style>
-        body { font-family: 'Sarabun', sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f4f4f9; }
-        .container { display: flex; gap: 20px; margin-top: 50px; }
-        svg { background: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); cursor: pointer; }
-        .part:hover { opacity: 0.7; stroke: #ff9800; stroke-width: 3; }
-        .info-box { width: 300px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h2 { color: #333; margin-top: 0; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>โมเดล 3D กัลวานอมิเตอร์ (Interactive Galvanometer)</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#161b22;
+    --border:#30363d;
+    --text:#e6edf3;
+    --muted:#8b949e;
+    --accent:#d4af37;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden;}
+  #app{display:flex;height:100vh;width:100vw;}
+  #viewport{flex:1;position:relative;min-width:0;overflow:hidden;}
+  #bg-layer{position:absolute;inset:0;background-size:cover;background-position:center;background-color:#f3f5f7;z-index:0;}
+  #bg-layer::after{content:"";position:absolute;inset:0;background:rgba(13,17,23,0.12);}
+  #canvas-container{position:absolute;inset:0;touch-action:none;z-index:1;}
+  canvas{display:block;background:transparent !important;}
+  #header{position:absolute;top:0;left:0;right:0;padding:14px 18px;
+    background:linear-gradient(180deg, rgba(13,17,23,0.92), rgba(13,17,23,0));z-index:5;pointer-events:none;}
+  #header h1{margin:0;font-size:17px;font-weight:600;}
+  #header p{margin:4px 0 0;font-size:12px;color:var(--muted);}
+  #control-bar{position:absolute;left:14px;right:14px;bottom:14px;z-index:5;
+    background:rgba(22,27,34,0.88);border:1px solid var(--border);border-radius:12px;
+    padding:12px 16px;backdrop-filter:blur(4px);transition:padding 0.2s ease;}
+  #control-bar-content{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  #control-bar.collapsed{padding:6px 16px;}
+  #control-bar.collapsed #control-bar-content{display:none;}
+  .panel-toggle-btn{position:absolute;top:-16px;right:12px;width:32px;height:32px;border-radius:50%;
+    background:var(--accent);color:#1a1a1a;border:2px solid var(--bg);font-size:14px;font-weight:700;
+    cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.4);z-index:6;line-height:1;}
+  #sidebar-toggle{position:absolute;top:14px;right:14px;z-index:6;width:36px;height:36px;border-radius:50%;
+    background:rgba(22,27,34,0.85);color:var(--text);border:1px solid var(--border);font-size:15px;cursor:pointer;}
+  .current-control{display:flex;align-items:center;gap:10px;flex:1;min-width:220px;}
+  .current-control label{font-size:12px;color:var(--muted);white-space:nowrap;}
+  #current-slider{flex:1;accent-color:var(--accent);height:20px;cursor:pointer;}
+  #current-readout{font-size:13px;font-weight:700;color:var(--accent);min-width:64px;text-align:right;white-space:nowrap;}
+  .control-side{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .field-toggle-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap;}
+  .field-toggle-label input{accent-color:var(--accent);width:15px;height:15px;cursor:pointer;}
+  #simulate-btn{background:var(--accent);color:#1a1a1a;border:none;padding:9px 16px;border-radius:8px;
+    font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;}
+  #simulate-btn:active{transform:scale(0.96);}
+  #simulate-btn:disabled{opacity:0.6;}
+  .room-control{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;
+    padding-top:10px;margin-top:10px;border-top:1px solid var(--border);}
+  .room-control label{font-size:12px;color:var(--muted);white-space:nowrap;}
+  .room-btn{background:transparent;border:1px solid var(--border);color:var(--text);
+    padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;white-space:nowrap;}
+  .room-btn.active{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:600;}
+  #sidebar{width:310px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;transition:width 0.2s ease,height 0.2s ease;}
+  #sidebar.collapsed{width:0;height:0;padding:0;border:none;overflow:hidden;}
+  #part-list{overflow-y:auto;padding:10px;flex:0 0 auto;max-height:46%;border-bottom:1px solid var(--border);}
+  #part-list button{display:block;width:100%;text-align:left;background:transparent;border:1px solid var(--border);
+    color:var(--text);padding:8px 10px;margin-bottom:6px;border-radius:6px;font-size:12.5px;cursor:pointer;}
+  #part-list button:hover{border-color:var(--accent);}
+  #part-list button.active{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:600;}
+  #info-panel{padding:16px;overflow-y:auto;flex:1;}
+  #info-panel h2{margin:0 0 8px;font-size:16px;color:var(--accent);}
+  #info-panel p{margin:0;font-size:13px;line-height:1.7;color:var(--text);}
+  #info-panel .placeholder{color:var(--muted);font-size:13px;}
+  @media (max-width: 760px){
+    #app{flex-direction:column;}
+    #sidebar{width:100%;height:40%;border-left:none;border-top:1px solid var(--border);}
+    #part-list{max-height:110px;display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:6px;}
+    #part-list button{flex:0 0 auto;width:auto;margin-bottom:0;white-space:nowrap;}
+    #header h1{font-size:14px;}
+    #header p{font-size:11px;}
+    #control-bar{left:8px;right:8px;bottom:8px;padding:10px 12px;gap:10px;}
+    #control-bar.collapsed{padding:6px 12px;}
+    .current-control{min-width:100%;order:1;}
+    .control-side{width:100%;order:2;justify-content:space-between;}
+    #simulate-btn{padding:9px 14px;font-size:12px;}
+  }
+</style>
 </head>
 <body>
-
-    <h1>ส่วนประกอบของกัลวานอมิเตอร์</h1>
-    
-    <div class="container">
-        <!-- ภาพวาด 2D แบบ SVG -->
-        <svg width="400" height="300" viewBox="0 0 400 300">
-            <!-- แม่เหล็ก (Magnet) -->
-            <rect class="part" onclick="showInfo('magnet')" x="50" y="100" width="80" height="150" fill="#e74c3c" rx="10"/>
-            <rect class="part" onclick="showInfo('magnet')" x="270" y="100" width="80" height="150" fill="#3498db" rx="10"/>
-            <text x="85" y="180" fill="white" font-weight="bold">N</text>
-            <text x="305" y="180" fill="white" font-weight="bold">S</text>
-
-            <!-- ขดลวด (Coil) -->
-            <rect class="part" onclick="showInfo('coil')" x="160" y="120" width="80" height="110" fill="#f1c40f" stroke="#d35400" stroke-width="2"/>
-            
-            <!-- แกนเหล็กอ่อน (Iron Core) -->
-            <circle class="part" onclick="showInfo('core')" cx="200" cy="175" r="30" fill="#95a5a6"/>
-
-            <!-- สปริง (Spring) -->
-            <path class="part" onclick="showInfo('spring')" d="M 200 120 Q 220 100 200 90 T 200 70" fill="transparent" stroke="#7f8c8d" stroke-width="3"/>
-
-            <!-- เข็มชี้ (Pointer) -->
-            <line class="part" onclick="showInfo('pointer')" x1="200" cy="175" x2="200" y2="40" stroke="black" stroke-width="3"/>
-
-            <!-- หน้าปัด (Scale) -->
-            <path class="part" onclick="showInfo('scale')" d="M 100 50 Q 200 10 300 50" fill="transparent" stroke="#2c3e50" stroke-width="4"/>
-        </svg>
-
-        <!-- กล่องคำอธิบาย -->
-        <div class="info-box">
-            <h2 id="part-name">แตะที่ชิ้นส่วนต่างๆ</h2>
-            <p id="part-desc">คลิกที่รูปด้านซ้ายเพื่อดูคำอธิบายการทำงานของแต่ละส่วนแบบเข้าใจง่าย</p>
-        </div>
+<div id="app">
+  <div id="viewport">
+    <div id="bg-layer"></div>
+    <div id="canvas-container"></div>
+    <div id="header">
+      <h1>⚡ กัลวานอมิเตอร์ (Galvanometer) — โมเดล 3 มิติ</h1>
+      <p>ลาก/ปัดเพื่อหมุนมุมมอง • แตะชิ้นส่วนเพื่อดูคำอธิบาย • ลองใส่กระแสไฟฟ้าด้านล่าง</p>
     </div>
+    <button id="sidebar-toggle" title="ย่อ/ขยายรายการชิ้นส่วน">✕</button>
+    <div id="control-bar">
+      <button id="control-toggle" class="panel-toggle-btn" title="ย่อ/ขยายแผงควบคุม">▾</button>
+      <div id="control-bar-content">
+        <div class="current-control">
+          <label for="current-slider">กระแสไฟฟ้า</label>
+          <input type="range" id="current-slider" min="-20" max="20" step="1" value="0">
+          <span id="current-readout">0 mA</span>
+        </div>
+        <div class="control-side">
+          <label class="field-toggle-label"><input type="checkbox" id="field-toggle" checked> แสดงสนามแม่เหล็ก</label>
+          <button id="simulate-btn">▶ สุ่มทดสอบ</button>
+        </div>
+        <div class="room-control">
+          <label>ห้อง</label>
+          <button class="room-btn" data-room="room3d">ห้องเรียน 3D</button>
+          <button class="room-btn" data-room="classroom">ภาพห้องเรียน</button>
+          <button class="room-btn" data-room="plain">พื้นเรียบ</button>
+          <button class="room-btn" data-room="black">ห้องสีดำ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="sidebar">
+    <div id="part-list"></div>
+    <div id="info-panel"><p class="placeholder">แตะที่ชิ้นส่วนในโมเดล หรือเลือกจากรายการด้านบน เพื่อดูคำอธิบายของแต่ละชิ้นส่วน</p></div>
+  </div>
+</div>
 
-    <script>
-        const data = {
-            magnet: { name: "🧲 แม่เหล็กถาวร (Permanent Magnet)", desc: "สร้างสนามแม่เหล็กที่คงที่ โดยมีขั้วเหนือ (N) และขั้วใต้ (S) เพื่อรอให้แม่เหล็กไฟฟ้าจากขดลวดมาผลักหรือดูดขั้วกัน" },
-            coil: { name: "⚡ ขดลวด (Coil)", desc: "ลวดทองแดงที่พันรอบแกน เมื่อมีกระแสไฟฟ้าไหลผ่าน ขดลวดนี้จะกลายเป็น 'แม่เหล็กไฟฟ้า' และเกิดแรงผลักกับแม่เหล็กถาวร ทำให้ขดลวดหมุน" },
-            core: { name: "⚙️ แกนเหล็กอ่อน (Iron Core)", desc: "อยู่ตรงกลางขดลวด ช่วยรวมและเหนี่ยวนำเส้นแรงแม่เหล็กให้เข้มข้นขึ้น ทำให้ขดลวดหมุนได้แรงและแม่นยำขึ้น" },
-            spring: { name: "🌀 สปริงขด (Hairspring)", desc: "คอยดึงรั้งเข็มและขดลวดไม่ให้หมุนไปไกลเกิน และทำหน้าที่ดึงเข็มกลับมาที่เลข 0 เมื่อไม่มีกระแสไฟฟ้า" },
-            pointer: { name: "📍 เข็มชี้ (Pointer)", desc: "ติดอยู่กับแกนของขดลวด เมื่อขดลวดหมุน เข็มจะกวาดไปตามหน้าปัดเพื่อบอกปริมาณกระแสไฟฟ้าที่ไหลเข้ามา" },
-            scale: { name: "📏 หน้าปัด (Scale)", desc: "แผ่นสเกลที่มีตัวเลขระบุค่า เพื่อให้เราอ่านค่ากระแสไฟฟ้าหรือความต่างศักย์ได้" }
-        };
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  "use strict";
 
-        function showInfo(partKey) {
-            document.getElementById('part-name').innerText = data[partKey].name;
-            document.getElementById('part-desc').innerText = data[partKey].desc;
-        }
-    </script>
+  // ---------- ข้อมูลชิ้นส่วน ----------
+  var partsInfo = {
+    base: {
+      title: "ฐานเครื่องมือ (Base / Housing)",
+      desc: "โครงยึดหลักที่รองรับและประกอบชิ้นส่วนทั้งหมดของกัลวานอมิเตอร์เข้าด้วยกัน ทำหน้าที่รักษาตำแหน่งของแม่เหล็ก แกน และกลไกภายในให้มั่นคง"
+    },
+    magnet: {
+      title: "แม่เหล็กถาวร (Permanent Magnet)",
+      desc: "แม่เหล็กรูปเกือกม้าสร้างสนามแม่เหล็กคงที่ระหว่างขั้ว N (สีแดง) และขั้ว S (สีน้ำเงิน) เพื่อให้เกิดแรงกระทำต่อขดลวดเมื่อมีกระแสไฟฟ้าไหลผ่าน ตามหลักแรงลอเรนซ์"
+    },
+    core: {
+      title: "แกนเหล็กอ่อน (Soft Iron Core)",
+      desc: "ทรงกระบอกโลหะอยู่กึ่งกลางขดลวด ช่วยรวมเส้นแรงแม่เหล็กให้มีความหนาแน่นสม่ำเสมอในช่องว่างรอบแกน ทำให้สเกลของมาตรวัดเป็นเชิงเส้นมากขึ้น"
+    },
+    coil: {
+      title: "ขดลวดเคลื่อนที่ (Moving Coil)",
+      desc: "ขดลวดทองแดงพันเป็นกรอบรอบแกนเหล็ก เมื่อมีกระแสไฟฟ้าไหลผ่าน จะเกิดแรงบิด (torque) ตามกฎมือขวา ทำให้คอยล์และเข็มชี้หมุนไปตามปริมาณกระแสที่ไหล"
+    },
+    shaft: {
+      title: "แกนหมุน (Spindle / Shaft)",
+      desc: "แกนกลางที่ยึดขดลวดและเข็มชี้เข้าด้วยกัน วางอยู่บนแบริ่งปลายแหลม (pivot) ทั้งด้านบนและล่าง เพื่อให้หมุนได้อย่างอิสระด้วยแรงเสียดทานต่ำ"
+    },
+    pointer: {
+      title: "เข็มชี้ (Pointer / Needle)",
+      desc: "ยึดติดกับแกนหมุน เคลื่อนที่กวาดไปบนสเกลตามมุมที่คอยล์หมุน ยิ่งมีกระแสไฟฟ้าไหลผ่านมาก เข็มก็จะเบนมุมมากขึ้นตามสัดส่วน"
+    },
+    scale: {
+      title: "สเกลหน้าปัด (Scale)",
+      desc: "แผ่นโค้งพร้อมขีดแบ่งมาตรฐาน ใช้อ่านค่าปริมาณกระแสไฟฟ้าที่ไหลผ่านกัลวานอมิเตอร์จากตำแหน่งของเข็มชี้"
+    },
+    springs: {
+      title: "สปริงควบคุม (Control Springs)",
+      desc: "สปริงเกลียวแบนด้านบนและล่างทำหน้าที่ 2 อย่าง คือ นำกระแสไฟฟ้าเข้า-ออกจากขดลวด และสร้างแรงบิดต้าน (restoring torque) เพื่อดึงเข็มกลับตำแหน่งศูนย์เมื่อไม่มีกระแสไหล"
+    },
+    bearings: {
+      title: "แบริ่งยึดแกน (Pivot Bearings)",
+      desc: "จุดรองรับปลายแกนหมุนทั้งด้านบนและด้านล่าง ช่วยลดแรงเสียดทานและรักษาแนวแกนหมุนให้มั่นคงและแม่นยำ"
+    },
+    terminals: {
+      title: "ขั้วต่อไฟฟ้า (Terminals)",
+      desc: "จุดเชื่อมต่อวงจรภายนอกเข้ากับกัลวานอมิเตอร์ กระแสไฟฟ้าจากวงจรจะไหลผ่านขั้วต่อ ผ่านสปริงควบคุม เข้าสู่ขดลวดเคลื่อนที่"
+    },
+    field: {
+      title: "เส้นแรงสนามแม่เหล็ก (Magnetic Field Lines)",
+      desc: "เส้นแสดงทิศทางสนามแม่เหล็กจากขั้ว N ไปยังขั้ว S ผ่านช่องว่างรอบแกนเหล็ก ตัวสนามเองมีค่าคงที่เสมอ (มาจากแม่เหล็กถาวร) แต่จุดสว่างที่ไหลอยู่บนเส้นจะไหลเร็วและสว่างขึ้นตามขนาดกระแสไฟฟ้าที่ใส่ เพื่อสื่อถึงแรงปฏิสัมพันธ์ระหว่างกระแสในขดลวดกับสนามนี้ ซึ่งเป็นแรงที่ทำให้เข็มเบน"
+    }
+  };
+  var partOrder = ["base","magnet","core","coil","shaft","pointer","scale","springs","bearings","terminals","field"];
+
+  // ---------- ตั้งค่าฉาก ----------
+  var container = document.getElementById('canvas-container');
+  var scene = new THREE.Scene();
+
+  var camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 100);
+
+  var renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setClearColor(0x000000, 0);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+  var dLight = new THREE.DirectionalLight(0xffffff, 0.85);
+  dLight.position.set(6,10,7);
+  scene.add(dLight);
+  var fillLight = new THREE.DirectionalLight(0x88aaff, 0.35);
+  fillLight.position.set(-6,3,-4);
+  scene.add(fillLight);
+
+  var raycaster = new THREE.Raycaster();
+  var selectableObjects = [];
+
+  function tagPart(mesh, key){
+    mesh.userData.partKey = key;
+    selectableObjects.push(mesh);
+    return mesh;
+  }
+
+  function makeTextSprite(text, opts){
+    opts = opts || {};
+    var size = 128;
+    var canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,size,size);
+    var fontSize = opts.fontSize || 76;
+    ctx.font = '800 ' + fontSize + 'px Arial, sans-serif';
+    ctx.fillStyle = opts.color || '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, size/2, size/2 + fontSize*0.03);
+    var tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    var mat = new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:opts.depthTest!==false});
+    var sprite = new THREE.Sprite(mat);
+    var s = opts.scale || 0.4;
+    sprite.scale.set(s,s,s);
+    return sprite;
+  }
+
+  function makeNamePaper(text){
+    var canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 300;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fbfbf6';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle = '#cfcfc6';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(4,4,canvas.width-8,canvas.height-8);
+    ctx.fillStyle = '#1c1f24';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    var fontSize = 52;
+    var maxWidth = canvas.width - 60;
+    do{
+      ctx.font = '700 '+fontSize+'px Arial, sans-serif';
+      fontSize -= 2;
+    } while(ctx.measureText(text).width > maxWidth && fontSize > 18);
+    ctx.fillText(text, canvas.width/2, canvas.height/2);
+    var tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    var mat = new THREE.MeshStandardMaterial({map:tex, roughness:0.9, metalness:0.0, side:THREE.DoubleSide});
+    var mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.3,0.76), mat);
+    mesh.rotation.x = -Math.PI/2;
+    return mesh;
+  }
+
+  // ---------- ห้องเรียนจำลอง 3 มิติ (พื้น, ผนัง, กระดานไวท์บอร์ด, โต๊ะ) ----------
+  var roomGroup = new THREE.Group();
+  scene.add(roomGroup);
+
+  var floorMat = new THREE.MeshStandardMaterial({color:0x9a968f, roughness:0.95, metalness:0.02});
+  var floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(24,24), floorMat);
+  floorMesh.rotation.x = -Math.PI/2;
+  floorMesh.position.set(0,-4.3,0);
+  roomGroup.add(floorMesh);
+
+  var wallMat = new THREE.MeshStandardMaterial({color:0xaeb7c2, roughness:0.9, metalness:0.02});
+  var backWall = new THREE.Mesh(new THREE.BoxGeometry(16,9,0.15), wallMat);
+  backWall.position.set(0,0.2,-3.3);
+  roomGroup.add(backWall);
+
+  var sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.15,9,11), wallMat);
+  sideWall.position.set(-6.5,0.2,1.5);
+  roomGroup.add(sideWall);
+
+  var wallBaseMat = new THREE.MeshStandardMaterial({color:0x6f7680, roughness:0.9, metalness:0.02});
+  var wallBaseBack = new THREE.Mesh(new THREE.BoxGeometry(16,0.6,0.18), wallBaseMat);
+  wallBaseBack.position.set(0,-3.95,-3.28);
+  roomGroup.add(wallBaseBack);
+
+  var boardFrameMat = new THREE.MeshStandardMaterial({color:0x3a3f46, roughness:0.6, metalness:0.3});
+  var boardFrame = new THREE.Mesh(new THREE.BoxGeometry(3.5,2.1,0.08), boardFrameMat);
+  boardFrame.position.set(-1.5,1.0,-3.21);
+  roomGroup.add(boardFrame);
+
+  var boardMat = new THREE.MeshStandardMaterial({color:0xf5f5f0, roughness:0.4, metalness:0.05});
+  var whiteboard = new THREE.Mesh(new THREE.BoxGeometry(3.2,1.85,0.05), boardMat);
+  whiteboard.position.set(-1.5,1.0,-3.17);
+  roomGroup.add(whiteboard);
+
+  var deskTopMat = new THREE.MeshStandardMaterial({color:0x8a5a34, roughness:0.6, metalness:0.05});
+  var deskTop = new THREE.Mesh(new THREE.BoxGeometry(8.6,0.12,7.0), deskTopMat);
+  deskTop.position.set(0,-2.71,0);
+  roomGroup.add(deskTop);
+
+  var deskLegMat = new THREE.MeshStandardMaterial({color:0x1c1f24, roughness:0.5, metalness:0.5});
+  [[-3.9,-3.1],[3.9,-3.1],[-3.9,3.1],[3.9,3.1]].forEach(function(p){
+    var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.55,10), deskLegMat);
+    leg.position.set(p[0],-3.485,p[1]);
+    roomGroup.add(leg);
+  });
+
+  // ---------- ฐาน ----------
+  var baseMat = new THREE.MeshStandardMaterial({color:0x2b2f36, roughness:0.7, metalness:0.2});
+  var baseMesh = new THREE.Mesh(new THREE.BoxGeometry(5.4,0.5,4.4), baseMat);
+  baseMesh.position.set(0,-2.4,0);
+  scene.add(baseMesh);
+  tagPart(baseMesh, "base");
+
+  // ป้ายกระดาษชื่อ วางมุมโต๊ะด้านหน้า-ขวา ให้พ้นแนวตัวเครื่องมือและขอบโต๊ะ ไม่ถูกทับ
+  var namePaper = makeNamePaper('Aksaraphak Kingsuwan');
+  namePaper.position.set(3.4,-2.645,2.4);
+  scene.add(namePaper);
+
+  // ---------- แม่เหล็กเกือกม้า ----------
+  var magnetMat = new THREE.MeshStandardMaterial({color:0x555b66, roughness:0.5, metalness:0.6});
+  var poleNMat = new THREE.MeshStandardMaterial({color:0xd93636, roughness:0.4, metalness:0.4});
+  var poleSMat = new THREE.MeshStandardMaterial({color:0x3672d9, roughness:0.4, metalness:0.4});
+
+  var magnetBack = new THREE.Mesh(new THREE.BoxGeometry(3.8,1.0,0.4), magnetMat);
+  magnetBack.position.set(0,-0.6,-1.8);
+  scene.add(magnetBack); tagPart(magnetBack,"magnet");
+
+  var magnetArmL = new THREE.Mesh(new THREE.BoxGeometry(0.4,1.0,2.0), magnetMat);
+  magnetArmL.position.set(-1.7,-0.6,-0.9);
+  scene.add(magnetArmL); tagPart(magnetArmL,"magnet");
+
+  var magnetArmR = new THREE.Mesh(new THREE.BoxGeometry(0.4,1.0,2.0), magnetMat);
+  magnetArmR.position.set(1.7,-0.6,-0.9);
+  scene.add(magnetArmR); tagPart(magnetArmR,"magnet");
+
+  var poleTipL = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.95,0.3), poleNMat);
+  poleTipL.position.set(-1.7,-0.6,0.0);
+  scene.add(poleTipL); tagPart(poleTipL,"magnet");
+
+  var poleTipR = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.95,0.3), poleSMat);
+  poleTipR.position.set(1.7,-0.6,0.0);
+  scene.add(poleTipR); tagPart(poleTipR,"magnet");
+
+  var poleLabelN = makeTextSprite('N', {color:'#ffffff', scale:0.35});
+  poleLabelN.position.set(-1.7,-0.05,0.18);
+  scene.add(poleLabelN);
+
+  var poleLabelS = makeTextSprite('S', {color:'#ffffff', scale:0.35});
+  poleLabelS.position.set(1.7,-0.05,0.18);
+  scene.add(poleLabelS);
+
+  // ---------- แกนเหล็กอ่อน (คงที่) ----------
+  var coreMat = new THREE.MeshStandardMaterial({color:0x777d87, roughness:0.5, metalness:0.5});
+  var coreMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,1.2,28), coreMat);
+  scene.add(coreMesh); tagPart(coreMesh,"core");
+
+  // ---------- กลุ่มที่หมุนได้ (ขดลวด + แกนหมุน + เข็มชี้) ----------
+  var movingGroup = new THREE.Group();
+  scene.add(movingGroup);
+
+  var coilMat = new THREE.MeshStandardMaterial({color:0xc87137, roughness:0.4, metalness:0.5});
+  function coilBar(w,h,d,x,y,z){
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), coilMat);
+    m.position.set(x,y,z);
+    movingGroup.add(m);
+    tagPart(m,"coil");
+    return m;
+  }
+  coilBar(0.18,1.5,0.18, 0,0,-0.55);
+  coilBar(0.18,1.5,0.18, 0,0, 0.55);
+  coilBar(0.18,0.18,1.28, 0, 0.75,0);
+  coilBar(0.18,0.18,1.28, 0,-0.75,0);
+
+  var shaftMat = new THREE.MeshStandardMaterial({color:0xcfd3d8, roughness:0.3, metalness:0.7});
+  var shaftMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,3.4,12), shaftMat);
+  movingGroup.add(shaftMesh); tagPart(shaftMesh,"shaft");
+
+  var pointerMat = new THREE.MeshStandardMaterial({color:0xf2c14e, roughness:0.35, metalness:0.4});
+  var pointerTipMat = new THREE.MeshStandardMaterial({color:0xe63946, roughness:0.35, metalness:0.4});
+  var pointerCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,1.6,10), pointerMat);
+  pointerCyl.rotation.x = Math.PI/2;
+  pointerCyl.position.set(0,1.6,0.8);
+  movingGroup.add(pointerCyl); tagPart(pointerCyl,"pointer");
+
+  var pointerTip = new THREE.Mesh(new THREE.ConeGeometry(0.08,0.28,10), pointerTipMat);
+  pointerTip.rotation.x = Math.PI/2;
+  pointerTip.position.set(0,1.6,1.75);
+  movingGroup.add(pointerTip); tagPart(pointerTip,"pointer");
+
+  // ---------- สเกล / หน้าปัด (คงที่) แบบ center-zero เหมือนกัลวานอมิเตอร์จริง ----------
+  var dialY = 1.6;
+  var innerR = 1.55, outerR = 2.05, tickR = 1.9;
+  var angStart = -75*Math.PI/180, angEnd = 75*Math.PI/180;
+  var dialPlateMat = new THREE.MeshStandardMaterial({color:0xf3ecd8, roughness:0.8, metalness:0.05, side:THREE.DoubleSide});
+  var bezelMat = new THREE.MeshStandardMaterial({color:0x8b8f96, roughness:0.4, metalness:0.7, side:THREE.DoubleSide});
+
+  // สร้างแถบโค้งแบบกำหนดรัศมีในนอกเองได้ (ใช้ทั้งแผ่นหน้าปัดและกรอบขอบ) มุมตรงกับขีดสเกลเป๊ะ
+  function buildArcStrip(rInner, rOuter, y, mat, partKey){
+    var segs = 48;
+    var positions = [];
+    var indices = [];
+    for(var i=0;i<=segs;i++){
+      var a = angStart + (angEnd-angStart)*(i/segs);
+      var sx = Math.sin(a), cz = Math.cos(a);
+      positions.push(rInner*sx, y, rInner*cz);
+      positions.push(rOuter*sx, y, rOuter*cz);
+    }
+    for(var j=0;j<segs;j++){
+      var a0 = j*2, b0 = j*2+1, a1 = j*2+2, b1 = j*2+3;
+      indices.push(a0,a1,b0,  b0,a1,b1);
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    var mesh = new THREE.Mesh(geo, mat);
+    scene.add(mesh);
+    if(partKey) tagPart(mesh, partKey);
+    return mesh;
+  }
+
+  // แผ่นหน้าปัดรูปพัด
+  buildArcStrip(innerR, outerR, dialY, dialPlateMat, "scale");
+  // กรอบขอบหน้าปัด (bezel)
+  buildArcStrip(outerR, outerR+0.05, dialY+0.002, bezelMat, "scale");
+
+  // ขีดสเกลแบบ center-zero: -20 ... 0 ... +20 (ทุก 5 หน่วยต่อขีด)
+  var tickMat = new THREE.MeshStandardMaterial({color:0x2b2f36, roughness:0.6, metalness:0.1});
+  var tickCount = 9; // -20,-15,-10,-5,0,5,10,15,20
+  for(var i=0;i<tickCount;i++){
+    var ang = angStart + (angEnd-angStart)*(i/(tickCount-1));
+    var value = (i-4)*5;
+    var isMajor = (value % 10 === 0);
+    var sx = Math.sin(ang), cz = Math.cos(ang);
+    var h = isMajor ? 0.22 : 0.13;
+    var tick = new THREE.Mesh(new THREE.BoxGeometry(0.03,h,0.03), tickMat);
+    tick.position.set(tickR*sx, dialY, tickR*cz);
+    tick.rotation.y = -ang;
+    scene.add(tick); tagPart(tick,"scale");
+
+    if(isMajor){
+      var label = value === 0 ? '0' : Math.abs(value).toString();
+      var numSprite = makeTextSprite(label, {color:'#1c1f24', scale:0.26, fontSize:70});
+      numSprite.position.set((tickR+0.28)*sx, dialY, (tickR+0.28)*cz);
+      scene.add(numSprite);
+    }
+  }
+
+  // แถบกระจกเงาบาง ๆ ใต้ขีดสเกล (ของจริงใช้ลดความคลาดเคลื่อนจากมุมมอง)
+  var mirrorMat = new THREE.MeshStandardMaterial({color:0xc9ccd1, roughness:0.15, metalness:0.9, side:THREE.DoubleSide});
+  buildArcStrip(tickR-0.14, tickR-0.10, dialY+0.001, mirrorMat, "scale");
+
+  // ---------- สปริงควบคุม (คงที่) ----------
+  var springMat = new THREE.MeshStandardMaterial({color:0xb0b6bd, roughness:0.3, metalness:0.7});
+  var springTop = new THREE.Mesh(new THREE.TorusGeometry(0.26,0.02,8,24), springMat);
+  springTop.rotation.x = Math.PI/2;
+  springTop.position.set(0,1.05,0);
+  scene.add(springTop); tagPart(springTop,"springs");
+
+  var springBottom = new THREE.Mesh(new THREE.TorusGeometry(0.26,0.02,8,24), springMat);
+  springBottom.rotation.x = Math.PI/2;
+  springBottom.position.set(0,-1.05,0);
+  scene.add(springBottom); tagPart(springBottom,"springs");
+
+  // ---------- แบริ่ง (คงที่) ----------
+  var bearingMat = new THREE.MeshStandardMaterial({color:0x1c1f24, roughness:0.4, metalness:0.6});
+  var bearingTop = new THREE.Mesh(new THREE.SphereGeometry(0.09,14,14), bearingMat);
+  bearingTop.position.set(0,1.7,0);
+  scene.add(bearingTop); tagPart(bearingTop,"bearings");
+
+  var bearingBottom = new THREE.Mesh(new THREE.SphereGeometry(0.09,14,14), bearingMat);
+  bearingBottom.position.set(0,-1.7,0);
+  scene.add(bearingBottom); tagPart(bearingBottom,"bearings");
+
+  // ---------- ขั้วต่อไฟฟ้า (คงที่) ----------
+  var termMat = new THREE.MeshStandardMaterial({color:0xd4af37, roughness:0.3, metalness:0.7});
+  var termL = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.35,14), termMat);
+  termL.position.set(-0.9,-2.0,1.9);
+  scene.add(termL); tagPart(termL,"terminals");
+
+  var termR = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.35,14), termMat);
+  termR.position.set(0.9,-2.0,1.9);
+  scene.add(termR); tagPart(termR,"terminals");
+
+  var termLabelMinus = makeTextSprite('\u2212', {color:'#1c1f24', scale:0.3});
+  termLabelMinus.position.set(-0.9,-1.68,1.9);
+  scene.add(termLabelMinus);
+
+  var termLabelPlus = makeTextSprite('+', {color:'#1c1f24', scale:0.3});
+  termLabelPlus.position.set(0.9,-1.68,1.9);
+  scene.add(termLabelPlus);
+
+  // ---------- เส้นแรงสนามแม่เหล็ก (คงที่ ค่าคงที่ตามแม่เหล็กถาวร ไม่ขึ้นกับกระแส) ----------
+  var fieldGroup = new THREE.Group();
+  scene.add(fieldGroup);
+  var fieldLineMat = new THREE.LineBasicMaterial({color:0x7dc7ff, transparent:true, opacity:0.8});
+  var fieldArrowMat = new THREE.MeshStandardMaterial({color:0x7dc7ff, roughness:0.4, metalness:0.2, emissive:0x000000});
+
+  var fieldCurves = [];
+  [-1.0,-0.8,-0.6,-0.4,-0.2].forEach(function(y){
+    var startP = new THREE.Vector3(-1.55, y, 0.15);
+    var ctrlP  = new THREE.Vector3(0, y, 1.05);
+    var endP   = new THREE.Vector3(1.55, y, 0.15);
+    var curve = new THREE.QuadraticBezierCurve3(startP, ctrlP, endP);
+    var pts = curve.getPoints(24);
+    var geo = new THREE.BufferGeometry().setFromPoints(pts);
+    var line = new THREE.Line(geo, fieldLineMat);
+    fieldGroup.add(line);
+    tagPart(line, "field");
+
+    var arrow = new THREE.Mesh(new THREE.ConeGeometry(0.045,0.15,8), fieldArrowMat);
+    arrow.position.copy(curve.getPoint(0.82));
+    var tangent = curve.getTangent(0.82).normalize();
+    arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), tangent);
+    fieldGroup.add(arrow);
+    tagPart(arrow, "field");
+
+    fieldCurves.push(curve);
+  });
+
+  // อนุภาคไหลไปตามเส้นสนาม แสดง "แรงปฏิสัมพันธ์" ระหว่างกระแสกับสนามแม่เหล็ก
+  // ความเร็วการไหล + ความสว่าง จะแปรผันตามขนาดกระแสไฟฟ้าที่ใส่จริง (ยิ่งกระแสมาก ยิ่งไหลเร็ว/สว่างขึ้น)
+  var particleMat = new THREE.MeshStandardMaterial({color:0xbfe6ff, emissive:0x2a6fb0, emissiveIntensity:0.2, roughness:0.3, metalness:0.1});
+  var fieldParticles = [];
+  fieldCurves.forEach(function(curve){
+    [0.1, 0.4, 0.7].forEach(function(t0){
+      var p = new THREE.Mesh(new THREE.SphereGeometry(0.045,10,10), particleMat);
+      p.position.copy(curve.getPoint(t0));
+      fieldGroup.add(p);
+      tagPart(p, "field");
+      fieldParticles.push({mesh:p, curve:curve, t:t0});
+    });
+  });
+  var fieldFlowSpeed = 0; // ลูป/วินาที — 0 เมื่อไม่มีกระแส
+
+  document.getElementById('field-toggle').addEventListener('change', function(e){
+    fieldGroup.visible = e.target.checked;
+  });
+
+  // บันทึกค่าสี emissive ดั้งเดิมของทุกวัสดุไว้ล่วงหน้า (ครั้งเดียว ตอนสร้างฉากเสร็จ)
+  // เพื่อไม่ให้การไฮไลต์ชิ้นส่วนที่ใช้วัสดุร่วมกันหลายชิ้น (เช่นแม่เหล็ก/ขดลวด) ทำให้สีค้างผิดพลาด
+  var materialBaseline = new Map();
+  selectableObjects.forEach(function(obj){
+    var mat = obj.material;
+    if(mat && mat.emissive && !materialBaseline.has(mat)){
+      materialBaseline.set(mat, {hex: mat.emissive.getHex(), intensity: mat.emissiveIntensity});
+    }
+  });
+
+  // ---------- กล้องแบบหมุนเอง (ใช้ได้ทั้งเมาส์และนิ้ว) ----------
+  var camState = {radius:8.5, theta:Math.PI*0.28, phi:Math.PI*0.36};
+  function updateCameraPosition(){
+    var r = camState.radius, t = camState.theta, p = camState.phi;
+    camera.position.x = r*Math.sin(p)*Math.sin(t);
+    camera.position.y = r*Math.cos(p);
+    camera.position.z = r*Math.sin(p)*Math.cos(t);
+    camera.lookAt(0,0,0);
+  }
+  updateCameraPosition();
+
+  var pointers = new Map();
+  var rotating = false;
+  var dragStart = {x:0,y:0,time:0};
+  var pinchStartDist = 0, pinchStartRadius = 0;
+
+  function dist2(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  var dom = renderer.domElement;
+  dom.style.cursor = "grab";
+
+  dom.addEventListener('pointerdown', function(e){
+    dom.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pointers.size===1){
+      dragStart = {x:e.clientX, y:e.clientY, time:Date.now()};
+      rotating = true;
+      dom.style.cursor = "grabbing";
+    } else if(pointers.size===2){
+      rotating = false;
+      var pts = Array.from(pointers.values());
+      pinchStartDist = dist2(pts[0], pts[1]);
+      pinchStartRadius = camState.radius;
+    }
+  });
+
+  dom.addEventListener('pointermove', function(e){
+    if(!pointers.has(e.pointerId)) return;
+    var prev = pointers.get(e.pointerId);
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pointers.size===1 && rotating){
+      var dx = e.clientX - prev.x;
+      var dy = e.clientY - prev.y;
+      camState.theta -= dx*0.008;
+      camState.phi -= dy*0.008;
+      camState.theta = Math.max(-1.35, Math.min(1.35, camState.theta));
+      camState.phi = Math.max(0.2, Math.min(Math.PI-0.2, camState.phi));
+      updateCameraPosition();
+    } else if(pointers.size===2){
+      var pts = Array.from(pointers.values());
+      var d = dist2(pts[0], pts[1]);
+      if(pinchStartDist>0){
+        var scale = pinchStartDist/d;
+        camState.radius = Math.max(3.5, Math.min(12, pinchStartRadius*scale));
+        updateCameraPosition();
+      }
+    }
+  });
+
+  function endPointer(e){
+    if(pointers.size===1 && rotating){
+      var dt = Date.now() - dragStart.time;
+      var dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+      var d = Math.hypot(dx,dy);
+      if(d < 6 && dt < 450){
+        handleTap(e.clientX, e.clientY);
+      }
+    }
+    pointers.delete(e.pointerId);
+    if(pointers.size < 2){ pinchStartDist = 0; }
+    if(pointers.size === 0){ rotating = false; dom.style.cursor = "grab"; }
+  }
+  dom.addEventListener('pointerup', endPointer);
+  dom.addEventListener('pointercancel', endPointer);
+
+  dom.addEventListener('wheel', function(e){
+    e.preventDefault();
+    camState.radius = Math.max(3.5, Math.min(12, camState.radius + e.deltaY*0.01));
+    updateCameraPosition();
+  }, {passive:false});
+
+  function handleTap(clientX, clientY){
+    var rect = dom.getBoundingClientRect();
+    var mouse = new THREE.Vector2(
+      ((clientX-rect.left)/rect.width)*2-1,
+      -((clientY-rect.top)/rect.height)*2+1
+    );
+    raycaster.setFromCamera(mouse, camera);
+    var hits = raycaster.intersectObjects(selectableObjects, false);
+    if(hits.length>0){
+      selectPart(hits[0].object.userData.partKey);
+    }
+  }
+
+  // ---------- แผงข้อมูล / รายการชิ้นส่วน ----------
+  var infoPanel = document.getElementById('info-panel');
+  var partListEl = document.getElementById('part-list');
+  var listButtons = {};
+
+  partOrder.forEach(function(key){
+    var btn = document.createElement('button');
+    btn.textContent = partsInfo[key].title.split(' (')[0];
+    btn.addEventListener('click', function(){ selectPart(key); });
+    partListEl.appendChild(btn);
+    listButtons[key] = btn;
+  });
+
+  var currentHighlighted = [];
+  function clearHighlight(){
+    currentHighlighted.forEach(function(mat){
+      var base = materialBaseline.get(mat);
+      if(base){
+        mat.emissive.setHex(base.hex);
+        mat.emissiveIntensity = base.intensity;
+      }
+    });
+    currentHighlighted = [];
+  }
+
+  function selectPart(key){
+    var info = partsInfo[key];
+    if(!info) return;
+    infoPanel.innerHTML = '<h2>'+info.title+'</h2><p>'+info.desc+'</p>';
+    Object.keys(listButtons).forEach(function(k){
+      listButtons[k].classList.toggle('active', k===key);
+    });
+    listButtons[key].scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+
+    clearHighlight();
+    var seenMats = new Set();
+    selectableObjects.forEach(function(obj){
+      var mat = obj.material;
+      if(obj.userData.partKey === key && mat && mat.emissive && !seenMats.has(mat)){
+        seenMats.add(mat);
+        mat.emissive.setHex(0xd4af37);
+        mat.emissiveIntensity = 0.6;
+        currentHighlighted.push(mat);
+      }
+    });
+  }
+
+  // ---------- ย่อ/ขยายแผงยูไอ ----------
+  var sidebarEl = document.getElementById('sidebar');
+  var sidebarToggle = document.getElementById('sidebar-toggle');
+  sidebarToggle.addEventListener('click', function(){
+    var collapsed = sidebarEl.classList.toggle('collapsed');
+    sidebarToggle.textContent = collapsed ? '☰' : '✕';
+  });
+
+  var controlBarEl = document.getElementById('control-bar');
+  var controlToggle = document.getElementById('control-toggle');
+  controlToggle.addEventListener('click', function(){
+    var collapsed = controlBarEl.classList.toggle('collapsed');
+    controlToggle.textContent = collapsed ? '▴' : '▾';
+  });
+
+  // ---------- ควบคุมกระแสไฟฟ้า: หมุนเข็มตามค่าที่ใส่แบบเรียลไทม์ ----------
+  var maxCurrent = 20; // mA, ชนสุดขอบสเกล ตรงกับ angEnd
+  var currentSlider = document.getElementById('current-slider');
+  var currentReadout = document.getElementById('current-readout');
+
+  function applyCurrent(value){
+    value = Math.max(-maxCurrent, Math.min(maxCurrent, Math.round(value)));
+    currentSlider.value = value;
+    currentReadout.textContent = (value>0 ? '+' : '') + value + ' mA';
+    movingGroup.rotation.y = (value/maxCurrent) * angEnd;
+
+    var mag = Math.abs(value)/maxCurrent; // 0..1
+    fieldFlowSpeed = mag * 0.9; // ลูป/วินาที — ยิ่งกระแสมาก ยิ่งไหลเร็ว
+    particleMat.emissiveIntensity = 0.2 + mag * 1.4; // ยิ่งกระแสมาก ยิ่งสว่าง (แรงปฏิสัมพันธ์มากขึ้น)
+  }
+
+  currentSlider.addEventListener('input', function(){
+    applyCurrent(parseFloat(currentSlider.value));
+  });
+
+  applyCurrent(0);
+
+  // ---------- ปุ่มสุ่มทดสอบ: กวาดค่ากระแสไปยังจุดสุ่มแล้วกลับที่ศูนย์ ----------
+  var simBtn = document.getElementById('simulate-btn');
+  var simAnimating = false;
+  function easeInOutQuad(t){ return t<0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+  simBtn.addEventListener('click', function(){
+    if(simAnimating) return;
+    simAnimating = true;
+    simBtn.disabled = true;
+    currentSlider.disabled = true;
+    var sign = Math.random() < 0.5 ? -1 : 1;
+    var target = sign * (10 + Math.random()*10);
+    var start = performance.now();
+    var phase1 = 900, holdTime = 600, phase2 = 900;
+
+    function step(now){
+      var t = now - start;
+      if(t < phase1){
+        applyCurrent(easeInOutQuad(t/phase1) * target);
+        requestAnimationFrame(step);
+      } else if(t < phase1+holdTime){
+        applyCurrent(target);
+        requestAnimationFrame(step);
+      } else if(t < phase1+holdTime+phase2){
+        var tt = (t-phase1-holdTime)/phase2;
+        applyCurrent(target * (1-easeInOutQuad(tt)));
+        requestAnimationFrame(step);
+      } else {
+        applyCurrent(0);
+        simAnimating = false;
+        simBtn.disabled = false;
+        currentSlider.disabled = false;
+      }
+    }
+    requestAnimationFrame(step);
+  });
+
+  // ---------- เลือกพื้นหลัง (ห้อง) ----------
+  var bgLayer = document.getElementById('bg-layer');
+  var roomButtons = document.querySelectorAll('.room-btn');
+
+  function setRoom(kind){
+    roomButtons.forEach(function(b){ b.classList.toggle('active', b.dataset.room===kind); });
+    if(kind === 'room3d'){
+      roomGroup.visible = true;
+      bgLayer.style.backgroundImage = 'none';
+      bgLayer.style.backgroundColor = '#cfd6da';
+      return;
+    }
+    roomGroup.visible = false;
+    if(kind === 'classroom'){
+      bgLayer.style.backgroundImage = "url('assets/room-classroom.webp')";
+    } else if(kind === 'plain'){
+      bgLayer.style.backgroundImage = 'none';
+      bgLayer.style.backgroundColor = '#f3f5f7';
+    } else if(kind === 'black'){
+      bgLayer.style.backgroundImage = 'none';
+      bgLayer.style.backgroundColor = '#050505';
+    }
+  }
+
+  roomButtons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      setRoom(btn.dataset.room);
+    });
+  });
+
+  setRoom('room3d');
+
+  // ---------- resize / render loop ----------
+  function handleResize(){
+    camera.aspect = container.clientWidth/container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  }
+  window.addEventListener('resize', handleResize);
+
+  // เรียก resize ซ้ำระหว่างและหลังทรานซิชันตอนย่อ/ขยายแผง เพื่อให้ภาพไม่บิดเบี้ยว
+  function resizeDuringTransition(){
+    var start = performance.now();
+    function tick(now){
+      handleResize();
+      if(now - start < 260){ requestAnimationFrame(tick); }
+    }
+    requestAnimationFrame(tick);
+  }
+  sidebarToggle.addEventListener('click', resizeDuringTransition);
+  controlToggle.addEventListener('click', resizeDuringTransition);
+
+  var clock = new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    var dt = clock.getDelta();
+    if(fieldFlowSpeed > 0){
+      fieldParticles.forEach(function(fp){
+        fp.t += fieldFlowSpeed * dt;
+        if(fp.t > 1) fp.t -= 1;
+        fp.mesh.position.copy(fp.curve.getPoint(fp.t));
+      });
+    }
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
 </body>
 </html>
